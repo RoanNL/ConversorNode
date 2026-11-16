@@ -19,9 +19,14 @@
         input[type="file"] { display: none; }
         .nome-arquivo { margin-top: 10px; font-weight: bold; color: #9c27b0; font-size: 14px; word-break: break-all; }
         
-        .color-picker-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #fdfaf6; padding: 15px; border-radius: 8px; border: 1px solid #e1bee7;}
+        .color-picker-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #fdfaf6; padding: 15px; border-radius: 8px; border: 1px solid #e1bee7;}
         .color-picker-container label { font-weight: bold; color: #555; }
         input[type="color"] { border: none; width: 60px; height: 40px; cursor: pointer; background: none; border-radius: 4px; padding: 0;}
+
+        /* Estilo do novo select */
+        .select-container { margin-bottom: 20px; text-align: left; }
+        .select-container label { font-weight: bold; color: #555; display: block; margin-bottom: 8px;}
+        select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; cursor: pointer; background-color: #fcfcfc;}
 
         .slider-container { margin-bottom: 25px; text-align: left; }
         .slider-container label { font-weight: bold; color: #555; display: block; margin-bottom: 8px;}
@@ -38,7 +43,7 @@
 <div class="container">
     <a href="/" class="btn-voltar">← Voltar ao Hub</a>
     <h1>Apagador de Fundos</h1>
-    <p>Escolha a cor que deseja remover da imagem (Branco, Preto, Verde, etc).</p>
+    <p>Remova a cor de fundo e transforme em PNG transparente.</p>
     
     <form id="form-remocao">
         <label class="upload-area" for="imagem-upload">
@@ -48,14 +53,20 @@
         </label>
 
         <div class="color-picker-container">
-            <label for="cor-fundo">Cor a remover do fundo:</label>
-            <!-- A cor padrão continua a ser o branco -->
+            <label for="cor-fundo">Cor a remover:</label>
             <input type="color" id="cor-fundo" name="cor" value="#ffffff">
         </div>
 
+        <div class="select-container">
+            <label for="modo-remocao">Comportamento do Apagador:</label>
+            <select id="modo-remocao" name="modo">
+                <option value="bordas">Limpar apenas bordas (Preserva o interior)</option>
+                <option value="global" selected>Limpar toda a imagem (Apaga os buracos)</option>
+            </select>
+        </div>
+
         <div class="slider-container">
-            <label for="tolerancia">Tolerância a Sombras: <span id="valor-forca">Média (Recomendado)</span></label>
-            <!-- Agora a escala vai de 0 (Exata) a 150 (Muito forte) -->
+            <label for="tolerancia">Tolerância a Sombras: <span id="valor-forca">Média</span></label>
             <input type="range" id="tolerancia" name="tolerancia" min="0" max="150" value="40" step="1">
             <div class="slider-desc">
                 <span>Cor Exata</span>
@@ -88,10 +99,10 @@
 
     sliderTolerancia.addEventListener('input', (e) => {
         const val = parseInt(e.target.value);
-        if (val === 0) valorForca.innerText = "Exata (Apenas a cor selecionada)";
-        else if (val <= 20) valorForca.innerText = "Baixa (Tons muito parecidos)";
+        if (val === 0) valorForca.innerText = "Exata (Só a cor selecionada)";
+        else if (val <= 20) valorForca.innerText = "Baixa (Tons parecidos)";
         else if (val <= 60) valorForca.innerText = "Média (Recomendado)";
-        else valorForca.innerText = "Forte (Pega muitas sombras e bordas)";
+        else valorForca.innerText = "Forte (Pega muitas sombras)";
     });
 
     form.addEventListener('submit', async (e) => {
@@ -132,7 +143,7 @@
                 form.reset();
                 textoUpload.style.display = 'inline';
                 nomeArquivo.innerText = '';
-                valorForca.innerText = "Média (Recomendado)";
+                valorForca.innerText = "Média";
                 btnConverter.disabled = false;
                 btnConverter.innerText = "Remover Cor Mágica";
             }, 3000);
