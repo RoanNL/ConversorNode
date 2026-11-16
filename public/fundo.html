@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Removedor de Fundo Inteligente</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; position: relative;}
+        
+        .btn-voltar { position: absolute; top: 20px; left: 20px; text-decoration: none; color: #666; font-weight: bold; font-size: 14px; transition: 0.2s;}
+        .btn-voltar:hover { color: #9c27b0; }
+
+        h1 { color: #333; margin-bottom: 5px; font-size: 24px; margin-top: 10px;}
+        p { color: #666; margin-bottom: 25px; font-size: 14px; }
+        
+        .upload-area { border: 2px dashed #9c27b0; border-radius: 8px; padding: 30px; background-color: #faf5ff; margin-bottom: 20px; cursor: pointer; transition: 0.3s; display: block;}
+        .upload-area:hover { background-color: #f3e5f5; }
+        input[type="file"] { display: none; }
+        .nome-arquivo { margin-top: 10px; font-weight: bold; color: #9c27b0; font-size: 14px; word-break: break-all; }
+        
+        .color-picker-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #fdfaf6; padding: 15px; border-radius: 8px; border: 1px solid #e1bee7;}
+        .color-picker-container label { font-weight: bold; color: #555; }
+        input[type="color"] { border: none; width: 60px; height: 40px; cursor: pointer; background: none; border-radius: 4px; padding: 0;}
+
+        .slider-container { margin-bottom: 25px; text-align: left; }
+        .slider-container label { font-weight: bold; color: #555; display: block; margin-bottom: 8px;}
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .slider-desc { font-size: 12px; color: #888; display: flex; justify-content: space-between; margin-top: 5px;}
+
+        button { background-color: #9c27b0; color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #7b1fa2; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="btn-voltar">← Voltar ao Hub</a>
+    <h1>Apagador de Fundos</h1>
+    <p>Escolha a cor que deseja remover da imagem (Branco, Preto, Verde, etc).</p>
+    
+    <form id="form-remocao">
+        <label class="upload-area" for="imagem-upload">
+            <span id="texto-upload">📁 Escolher imagem</span>
+            <input type="file" id="imagem-upload" name="imagem" accept="image/*" required>
+            <div class="nome-arquivo" id="nome-arquivo"></div>
+        </label>
+
+        <div class="color-picker-container">
+            <label for="cor-fundo">Cor a remover do fundo:</label>
+            <!-- A cor padrão continua a ser o branco -->
+            <input type="color" id="cor-fundo" name="cor" value="#ffffff">
+        </div>
+
+        <div class="slider-container">
+            <label for="tolerancia">Tolerância a Sombras: <span id="valor-forca">Média (Recomendado)</span></label>
+            <!-- Agora a escala vai de 0 (Exata) a 150 (Muito forte) -->
+            <input type="range" id="tolerancia" name="tolerancia" min="0" max="150" value="40" step="1">
+            <div class="slider-desc">
+                <span>Cor Exata</span>
+                <span>Tons Próximos</span>
+            </div>
+        </div>
+
+        <button type="submit" id="btn-converter">Remover Cor Mágica</button>
+    </form>
+</div>
+
+<script>
+    const form = document.getElementById('form-remocao');
+    const inputImagem = document.getElementById('imagem-upload');
+    const nomeArquivo = document.getElementById('nome-arquivo');
+    const textoUpload = document.getElementById('texto-upload');
+    const btnConverter = document.getElementById('btn-converter');
+    const sliderTolerancia = document.getElementById('tolerancia');
+    const valorForca = document.getElementById('valor-forca');
+
+    inputImagem.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            textoUpload.style.display = 'none';
+            nomeArquivo.innerText = "Pronto: " + e.target.files[0].name;
+        } else {
+            textoUpload.style.display = 'inline';
+            nomeArquivo.innerText = '';
+        }
+    });
+
+    sliderTolerancia.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        if (val === 0) valorForca.innerText = "Exata (Apenas a cor selecionada)";
+        else if (val <= 20) valorForca.innerText = "Baixa (Tons muito parecidos)";
+        else if (val <= 60) valorForca.innerText = "Média (Recomendado)";
+        else valorForca.innerText = "Forte (Pega muitas sombras e bordas)";
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        btnConverter.disabled = true;
+        btnConverter.innerText = "A analisar píxeis...";
+
+        const formData = new FormData(form);
+
+        try {
+            const resposta = await fetch('/api/remover-fundo', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!resposta.ok) throw new Error("Falha no servidor");
+
+            const blob = await resposta.blob();
+            const disposition = resposta.headers.get('Content-Disposition');
+            let nomeFinal = `imagem_sem_fundo.png`;
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename="([^"]*)"/.exec(disposition);
+                if (matches != null && matches[1]) nomeFinal = matches[1];
+            }
+
+            const urlDownload = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = urlDownload;
+            a.download = nomeFinal;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(urlDownload);
+
+            btnConverter.innerText = "✨ Sucesso! Download concluído.";
+            setTimeout(() => {
+                form.reset();
+                textoUpload.style.display = 'inline';
+                nomeArquivo.innerText = '';
+                valorForca.innerText = "Média (Recomendado)";
+                btnConverter.disabled = false;
+                btnConverter.innerText = "Remover Cor Mágica";
+            }, 3000);
+
+        } catch (erro) {
+            console.error(erro);
+            alert("Ocorreu um erro ao processar a imagem.");
+            btnConverter.disabled = false;
+            btnConverter.innerText = "Tentar Novamente";
+        }
+    });
+</script>
+</body>
+</html>

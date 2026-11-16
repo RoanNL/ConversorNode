@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor Universal de Imagens</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; position: relative;}
+        
+        .btn-voltar { position: absolute; top: 20px; left: 20px; text-decoration: none; color: #666; font-weight: bold; font-size: 14px; transition: 0.2s;}
+        .btn-voltar:hover { color: #007bff; }
+
+        h1 { color: #333; margin-bottom: 5px; font-size: 24px; margin-top: 10px;}
+        p { color: #666; margin-bottom: 25px; font-size: 14px; }
+        
+        .upload-area { border: 2px dashed #007bff; border-radius: 8px; padding: 30px; background-color: #f8fbff; margin-bottom: 20px; cursor: pointer; transition: 0.3s; display: block;}
+        .upload-area:hover { background-color: #e6f0ff; }
+        input[type="file"] { display: none; }
+        .nome-arquivo { margin-top: 10px; font-weight: bold; color: #007bff; font-size: 14px; word-break: break-all; }
+        
+        select { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        button { background-color: #007bff; color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="btn-voltar">← Voltar ao Hub</a>
+    <h1>Conversor de Imagens</h1>
+    <p>Converta PNG, JPEG, WebP, AVIF, TIFF e mais.</p>
+    
+    <form id="form-conversao">
+        <label class="upload-area" for="imagem-upload">
+            <span id="texto-upload">📁 Clique aqui para escolher uma imagem</span>
+            <input type="file" id="imagem-upload" name="imagem" accept="image/*" required>
+            <div class="nome-arquivo" id="nome-arquivo"></div>
+        </label>
+
+        <select name="formato" required>
+            <option value="" disabled selected>Escolha o formato final...</option>
+            <option value="jpeg">Converter para JPEG (.jpg)</option>
+            <option value="png">Converter para PNG (.png)</option>
+            <option value="webp">Converter para WebP (.webp)</option>
+            <option value="avif">Converter para AVIF (.avif)</option>
+            <option value="tiff">Converter para TIFF (.tiff)</option>
+            <option value="gif">Converter para GIF (.gif)</option>
+        </select>
+
+        <button type="submit" id="btn-converter">Converter e Baixar</button>
+    </form>
+</div>
+
+<script>
+    const form = document.getElementById('form-conversao');
+    const inputImagem = document.getElementById('imagem-upload');
+    const nomeArquivo = document.getElementById('nome-arquivo');
+    const textoUpload = document.getElementById('texto-upload');
+    const btnConverter = document.getElementById('btn-converter');
+
+    inputImagem.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            textoUpload.style.display = 'none';
+            nomeArquivo.innerText = "Imagem selecionada: " + e.target.files[0].name;
+        } else {
+            textoUpload.style.display = 'inline';
+            nomeArquivo.innerText = '';
+        }
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formatoSelecionado = document.querySelector('select[name="formato"]').value;
+        btnConverter.disabled = true;
+        btnConverter.innerText = "Convertendo... Aguarde";
+
+        const formData = new FormData(form);
+
+        try {
+            const resposta = await fetch('/api/converter', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!resposta.ok) throw new Error("Falha na conversão");
+
+            const blob = await resposta.blob();
+            const disposition = resposta.headers.get('Content-Disposition');
+            let nomeFinal = `imagem_convertida.${formatoSelecionado}`;
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename="([^"]*)"/.exec(disposition);
+                if (matches != null && matches[1]) nomeFinal = matches[1];
+            }
+
+            const urlDownload = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = urlDownload;
+            a.download = nomeFinal;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(urlDownload);
+
+            btnConverter.innerText = "Sucesso! Convertido.";
+            setTimeout(() => {
+                form.reset();
+                textoUpload.style.display = 'inline';
+                nomeArquivo.innerText = '';
+                btnConverter.disabled = false;
+                btnConverter.innerText = "Converter e Baixar";
+            }, 3000);
+
+        } catch (erro) {
+            console.error(erro);
+            alert("Ocorreu um erro ao converter a imagem.");
+            btnConverter.disabled = false;
+            btnConverter.innerText = "Tentar Novamente";
+        }
+    });
+</script>
+</body>
+</html>
